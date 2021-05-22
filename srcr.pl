@@ -12,60 +12,31 @@ loadcsv(Path1,Path2,Path3):-
 
 
 haCaminho(Estado, Estado1) :-
-	caminho(Estado, Estado1).
+	caminho(Estado, Estado1);
+	caminho(Estado1, Estado).
 
 inicial(0).
-final(24).
-
-resolveDFS(Solucao):-
-	inicial(InicialEstado),
-	resolveDFS(InicialEstado, [InicialEstado], Solucao).
-
-resolveDFS(Estado, _, [Estado]):-
-	final(Estado), !.
-
-resolveDFS(Estado, Historico, [Estado|Solucao]):-
-	haCaminho(Estado, Estado1),
-	not(member(Estado1, Historico)),
-	resolveDFS(Estado1, [Estado1|Historico], Solucao).
-
+final(12).
 
 resolveBFS(Solucao):-
 	inicial(InicialEstado),
-	resolveBFS(InicialEstado, [InicialEstado], Solucao).
+	resolveBFS([InicialEstado], [],Solucao).
 
-% Procura 1 nodo, vai a todos os vizinhos e repete o processo
+resolveBFS([],_,[]):-
+	fail, !.
 
-resolveBFS(S):-
-	inicial(Estado),
-	resolveBFS(Estado,[Estado],S).
+resolveBFS([E |Orla], _, [E]):-
+	final(E),!.
 
-
-resolveBFS(Estado,_,[Estado]):-
-	final(Estado), !.
-
-resolveBFS(Estado, Visitados, [Estado|Caminho]):-
-	vizinhos(Estado,L,Visitados),
-	vizinhosBFS(L,E).
-	
-
-vizinhosBFS([H|Vizinhos],H):-
-	final(H), !.
-
-vizinhosBFS([],_).
-vizinhosBFS([H|Vizinhos],E):-
-	not(final(H)), vizinhosBFS(Vizinhos).
-
-
-
-adicionaListas([],[],[]).
-adicionaListas([],[H|T],[H|R]):- 
-	adicionaListas([],L,R).
-adicionaListas([H|T],L,[H|R]):- 
-	adicionaListas(T,L,R).
+resolveBFS([E|Orla], Visitados, [E|Sol]):-
+	vizinhos(E,Vizinhos, Visitados, [E|Orla]), %calcular vizinhos
+	append(Orla,Vizinhos,NOrla), % adicionar vizinhos no fim da orla
+	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
 
 
 
-vizinhos(Estado,L,Visitados):-
-	findall(E, (haCaminho(Estado,E), not(member(E,Visitados))), L).
+
+
+vizinhos(Estado,Vizinhos, Visitados, Orla):-
+	findall(E, (haCaminho(Estado,E), not(member(E,Visitados)), not(member(E,Orla))), Vizinhos).
