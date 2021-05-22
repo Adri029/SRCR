@@ -18,6 +18,10 @@ haCaminho(Estado, Estado1) :-
 inicial(0).
 final(12).
 
+
+
+%adptar para receber o nodo anterior
+
 resolveBFS(Solucao):-
 	inicial(InicialEstado),
 	resolveBFS([InicialEstado], [],Solucao).
@@ -34,7 +38,20 @@ resolveBFS([E|Orla], Visitados, [E|Sol]):-
 	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
 
+resolveDFS(Solucao):-
+	inicial(InicialEstado),
+	resolveBFS([InicialEstado], [],Solucao).
 
+resolveDFS([],_,[]):-
+	fail, !.
+
+resolveDFS([E |Orla], _, [E]):-
+	final(E),!.
+
+resolveDFS([E|Orla], Visitados, [E|Sol]):- 
+	vizinhos(E,Vizinhos, Visitados, [E|Orla]), %calcular vizinhos
+	append(Vizinhos, Orla, NOrla), % adicionar vizinhos no fim da orla
+	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
 
 
