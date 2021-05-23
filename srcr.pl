@@ -54,6 +54,18 @@ resolveDFS([E|Orla], Visitados, [E|Sol]):-
 	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
 
+resolveBILP(S,N):-
+	inicial(InicialEstado),
+	resolveBILP(InicialEstado,N,S).
+
+resolveBILP(_,N,N,[]).
+
+resolveBILP(E,N,C,Sol):-
+	Next is C + 1,
+	resolveBILP(E,N,Next,Sol).
+
+
+
 
 vizinhos(Estado,Vizinhos, Visitados, Orla):-
 	findall(E, (haCaminho(Estado,E), not(member(E,Visitados)), not(member(E,Orla))), Vizinhos).
