@@ -1,5 +1,12 @@
 :- consult(paths).
 
+loadcsv:-
+	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\lixo.csv', Rows1,[functor(lixo), arity(3)]),
+   	maplist(assert, Rows1),
+   	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\local.csv', Rows2,[functor(local), arity(2)]),
+   	maplist(assert, Rows2),
+   	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\coordenada.csv', Rows3,[functor(coordenada), arity(4)]),
+   	maplist(assert, Rows3).
 
 loadcsv(Path1,Path2,Path3):- 
 	csv_read_file(Path1, Rows1,[functor(lixo), arity(3)]),
@@ -16,7 +23,7 @@ haCaminho(Estado, Estado1) :-
 	caminho(Estado1, Estado).
 
 inicial(0).
-final(12).
+final(24).
 
 
 
@@ -27,7 +34,7 @@ resolveBFS(Solucao):-
 	resolveBFS([InicialEstado], [],Solucao).
 
 resolveBFS([],_,[]):-
-	fail, !.
+	!,fail.
 
 resolveBFS([E |Orla], _, [E]):-
 	final(E),!.
@@ -40,10 +47,10 @@ resolveBFS([E|Orla], Visitados, [E|Sol]):-
 
 resolveDFS(Solucao):-
 	inicial(InicialEstado),
-	resolveBFS([InicialEstado], [],Solucao).
+	resolveDFS([InicialEstado], [],Solucao).
 
 resolveDFS([],_,[]):-
-	fail, !.
+	!, fail.
 
 resolveDFS([E |Orla], _, [E]):-
 	final(E),!.
@@ -51,18 +58,44 @@ resolveDFS([E |Orla], _, [E]):-
 resolveDFS([E|Orla], Visitados, [E|Sol]):- 
 	vizinhos(E,Vizinhos, Visitados, [E|Orla]), %calcular vizinhos
 	append(Vizinhos, Orla, NOrla), % adicionar vizinhos no fim da orla
-	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
+	resolveDFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
 
-resolveBILP(S,N):-
+
+% DFS com limite de procura
+
+resolveDFS([],_,_,[]).
+
+resolveDFS([E |Orla],_, _, [E]):-
+	final(E),!.
+
+resolveDFS([E |Orla], 0, Vis, Sol):-
+	!, not(final(E)), resolveDFS(Orla,0,Vis, Sol).
+
+resolveDFS([E|Orla], N ,Visitados, [E|Sol]):- 
+	vizinhos(E,Vizinhos, Visitados, [E|Orla]), %calcular vizinhos
+	append(Vizinhos, Orla, NOrla), % adicionar vizinhos no fim da orla
+	Next is N - 1,
+	resolveDFS(NOrla, Next, [E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
+
+
+resolveIDDFS(S,N):-
+	resolveIDDFS(S,N,0).
+
+resolveIDDFS(S,N,P):-
+	P is N + 1,
+	!,fail.
+
+resolveIDDFS(S,N,C):-
 	inicial(InicialEstado),
-	resolveBILP(InicialEstado,N,S).
+	C =< N,
+	resolveDFS([InicialEstado],C,[],S),
+	final(E),member(E,S).
 
-resolveBILP(_,N,N,[]).
+resolveIDDFS(S,N,C):-	
+	NewC is C + 1,
+	resolveIDDFS(S,N,NewC).
 
-resolveBILP(E,N,C,Sol):-
-	Next is C + 1,
-	resolveBILP(E,N,Next,Sol).
 
 
 
