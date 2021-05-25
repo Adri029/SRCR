@@ -98,7 +98,73 @@ resolveIDDFS(S,N,C):-
 
 
 
+insertSorted((State,Value),[],[(State,Value)]).
+insertSorted((State,Value),[(S,V)|List],Resp):-
+		Value =< V,
+		append([(State,Value)],[(S,V)|List],Resp).
+insertSorted((State,Value),[(S,V)|List],[(S,V)|Resp]):-
+		Value > V,
+		insertSorted((State,Value),List,Resp).
+
+
+aScore(A,R):-
+	final(E),
+	distancia(A,E,R).
+
+
+resolveAStar(S):-
+	inicial(InicialEstado),
+	aScore(InicialEstado, Score),
+	resolveAStar([(InicialEstado,Score)],[(InicialEstado, Score)], S).
+
+resolveAStar([(E,Score)|Orla],_,[(E,Score)]):-
+	final(E),!.
+
+resolveAStar([],_,[]):-
+	!,fail.
+
+resolveAStar([(E,Score)|Orla],Visitados,[(E,Score)|S]):-
+	findall(Estado, (haCaminho(E,Estado), not(member(E,Visitados))), Vizinhos),
+	forEach(aStarAux, Vizinhos, Orla, NOrla),
+	resolveAStar(NOrla,[E|Visitados],S).
+
+% calcular os custos dos caminhos
+
+aStarAux(Estado, Orla, NOrla):-
+	aScore(Estado, R),
+	AScore is R + Score,
+	(not(member((Estado,_),Orla)), insertSorted((Estado,AScore),Orla, NOrla);
+	member((Estado,NowScore),Orla), AScore < NowScore, delete(Orla,(Estado,NowScore),VOrla), insertSorted((Estado,NowScore),VOrla,NOrla)).
+
+forEach(_,_,[],_,[]).
+forEach(Pred,[E|T],Orla,R):-
+	call(Pred,E,Orla,R1),
+	forEach(Pred,T,R1,R).
+	
+
+
+
+
+
+
 
 
 vizinhos(Estado,Vizinhos, Visitados, Orla):-
 	findall(E, (haCaminho(Estado,E), not(member(E,Visitados)), not(member(E,Orla))), Vizinhos).
+
+
+degreesToRadians(D,R):-
+	R is D * 3.1415 / 180.
+
+distancia(A,E,R):-
+	coordenada(_,A,Lat1,Lon1),
+	coordenada(_,E,Lat2,Lon2),
+	Dlat is Lat2 - Lat1,
+	Dlon is Lon2 - Lon1,
+	degreesToRadians(Lat1, NLat1),
+	degreesToRadians(Lat2, NLat2),
+	Dlat2 is Dlat / 2,
+	Dlon2 is Dlon / 2,
+	C is sin(Dlat2) * sin(Dlat2) + sin(Dlon2) * sin(Dlon2) * cos(NLat1) * cos(NLat2),
+	B is 1 - C,
+	R is 6371 * 2 * atan2(sqrt(C), sqrt(B)).
