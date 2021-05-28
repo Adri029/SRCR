@@ -23,13 +23,13 @@ haCaminho(Estado, Estado1) :-
 	caminho(Estado1, Estado).
 
 inicial(0).
-final(31).
+final(21).
 
 
 
 %adptar para receber o nodo anterior
-
-resolveBFS(Solucao):-
+/*
+resolveBFS(_,Solucao):-
 	inicial(InicialEstado),
 	resolveBFS([InicialEstado], [],Solucao).
 
@@ -43,8 +43,28 @@ resolveBFS([E|Orla], Visitados, [E|Sol]):-
 	vizinhos(E,Vizinhos, Visitados, [E|Orla]), %calcular vizinhos
 	append(Orla,Vizinhos,NOrla), % adicionar vizinhos no fim da orla
 	resolveBFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
+*/
 
 
+resolveBFS(Sol1):-
+	inicial(NodeS),
+	final(NodeD),
+	bfs([[NodeS]], NodeD, Sol),
+	reverse(Sol,Sol1).
+
+bfs([[Node|Path]|_], Node, [Node|Path]).
+
+bfs([Path|Paths], NodeD, Sol):-
+	extende(Path, NewPaths),
+	append(Paths, NewPaths, Paths1),
+	bfs(Paths1, NodeD, Sol).
+
+extende([Node|Path], NewPaths) :-
+	findall([NewNode, Node|Path], (haCaminho(Node, NewNode), not(member(NewNode, [Node|Path]))), NewPaths).
+
+
+
+/*
 resolveDFS(Solucao):-
 	inicial(InicialEstado),
 	resolveDFS([InicialEstado], [],Solucao).
@@ -60,10 +80,25 @@ resolveDFS([E|Orla], Visitados, [E|Sol]):-
 	append(Vizinhos, Orla, NOrla), % adicionar vizinhos no fim da orla
 	resolveDFS(NOrla,[E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
 
+*/
+
+
+resolveDFS([Nodo|Caminho]):-
+	inicial(Nodo),
+    dfs(Nodo,[Nodo],Caminho).
+
+dfs(Nodo,_, []):-
+    final(Nodo).
+
+dfs(Nodo, Historico, [NodoProx|Caminho]):-
+    haCaminho(Nodo, NodoProx),
+    not(member(NodoProx, Historico)),
+    dfs(NodoProx, [NodoProx|Historico], Caminho).
+
 
 
 % DFS com limite de procura
-
+/*
 resolveDFS([],_,_,[]).
 
 resolveDFS([E |Orla],_, _, [E]):-
@@ -77,7 +112,9 @@ resolveDFS([E|Orla], N ,Visitados, [E|Sol]):-
 	append(Vizinhos, Orla, NOrla), % adicionar vizinhos no fim da orla
 	Next is N - 1,
 	resolveDFS(NOrla, Next, [E|Visitados], Sol). %calcular BFS para primeiro elemento da orla, adicionando a posicao atual aos visitados
+*/
 
+/*
 
 resolveIDDFS(S,N):-
 	resolveIDDFS(S,N,0).
@@ -96,7 +133,7 @@ resolveIDDFS(S,N,C):-
 	NewC is C + 1,
 	resolveIDDFS(S,N,NewC).
 
-
+*/
 
 insertSorted((State,Value),[],[(State,Value)]).
 insertSorted((State,Value),[(S,V)|List],Resp):-
@@ -109,9 +146,9 @@ insertSorted((State,Value),[(S,V)|List],[(S,V)|Resp]):-
 
 aScore(A,R):-
 	final(E),
-	distancia(A,E,R).
+	distancia(A,E,R),!.
 
-
+/*
 resolveAStar(S):-
 	inicial(InicialEstado),
 	aScore(InicialEstado, Score),
@@ -143,29 +180,8 @@ forEach(Pred,Pai,[E|T],Orla,R):-
 	call(Pred,E,Pai,Orla,R1),
 	forEach(Pred,Pai,T,R1,R).
 
+*/
 
-resolveGreedy(S):-
-	inicial(InicialEstado),
-	aScore(InicialEstado, Score),
-	resolveGreedy([(InicialEstado/0,Score)],[], S).
-
-resolveGreedy([(E/_,Score)|Orla],_,[(E,Score)]):-
-	final(E),!.
-
-resolveGreedy([],_,[]):-
-	!,fail.
-
-resolveGreedy([(E/Custo,Score)|Orla],Visitados,[(E,Cumulative)|S]):-
-	findall(Estado, (haCaminho(E,Estado), not(member((Estado,_),Visitados))), Vizinhos),
-	aScore(E,AScr),
-	forEach(aStarAux, _, Vizinhos, Orla, NOrla),
-	resolveGreedy(NOrla,[(E,Custo)|Visitados],S).
-
-
-greedyAux(Estado,_,Orla, NOrla):-
-	aScore(Estado, AScore),
-	(not(member((Estado,_),Orla)), insertSorted((Estado,AScore),Orla, NOrla);
-	member((Estado,NowScore),Orla), AScore < NowScore, delete(Orla,(Estado,NowScore),VOrla), insertSorted((Estado,AScore),VOrla,NOrla)).
 
 
 
@@ -173,7 +189,7 @@ greedyAux(Estado,_,Orla, NOrla):-
 resolveAEstrela(Nodo, Caminho/Custo) :-
     aScore(Nodo, Estima),
     aestrela([[Nodo]/0/Estima], CaminhoInverso/Custo/_),
-    inverso(CaminhoInverso, Caminho).
+    reverse(CaminhoInverso, Caminho).
 
 aestrela(Caminhos, Caminho) :-
 	obtem_melhor(Caminhos, Caminho),
@@ -196,18 +212,21 @@ obtem_melhor([_|Caminhos], MelhorCaminho) :-
 	obtem_melhor(Caminhos, MelhorCaminho).
     
 expandeAEstrela(Caminho, ExpCaminhos) :-
-findall(NovoCaminho, haCaminho(Caminho,NovoCaminho), ExpCaminhos). %adjacenteG/2 da Alínea anterior
+	findall(NovoCaminho, adjacenteG(Caminho,NovoCaminho), ExpCaminhos). %adjacenteG/2 da Alínea anterior
 
 
 adjacenteG([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/Est) :-
-	haCaminho(Nodo, ProxNodo), distancia(Nodo,ProxNodo,PassoCusto),\+ member(ProxNodo, Caminho),
+	haCaminho(Nodo, ProxNodo), distancia(Nodo,ProxNodo,PassoCusto), not(member(ProxNodo, Caminho)),
 	NovoCusto is Custo + PassoCusto,
 	aScore(ProxNodo, Est).
+	
 
 seleciona(E, [E|Xs], Xs).
 seleciona(E, [X|Xs], [X|Ys]) :- seleciona(E, Xs, Ys).
 
 
+
+%TODO eliminar repetidos do dataset para os algoritmos funcionarem
 
 
 vizinhos(Estado,Vizinhos, Visitados, Orla):-
