@@ -23,7 +23,7 @@ haCaminho(Estado, Estado1) :-
 	caminho(Estado1, Estado).
 
 inicial(0).
-final(24).
+final(31).
 
 
 
@@ -115,7 +115,7 @@ aScore(A,R):-
 resolveAStar(S):-
 	inicial(InicialEstado),
 	aScore(InicialEstado, Score),
-	resolveAStar([(InicialEstado,Score)],[(InicialEstado, Score)], S).
+	resolveAStar([(InicialEstado,Score)],[], S).
 
 resolveAStar([(E,Score)|Orla],_,[(E,Score)]):-
 	final(E),!.
@@ -123,28 +123,89 @@ resolveAStar([(E,Score)|Orla],_,[(E,Score)]):-
 resolveAStar([],_,[]):-
 	!,fail.
 
-resolveAStar([(E,Score)|Orla],Visitados,[(E,Score)|S]):-
-	findall(Estado, (haCaminho(E,Estado), not(member(E,Visitados))), Vizinhos),
-	forEach(aStarAux, Vizinhos, Orla, NOrla),
-	resolveAStar(NOrla,[E|Visitados],S).
+resolveAStar([(E,Score)|Orla],Visitados,[(E,Cumulative)|S]):-
+	findall(Estado, (haCaminho(E,Estado), not(member((Estado,_),Visitados))), Vizinhos),
+	aScore(E,AScr),
+	Cumulative is Score - AScr,
+	forEach(aStarAux, (E,Cumulative), Vizinhos, Orla, NOrla),
+	resolveAStar(NOrla,[(E,Cumulative)|Visitados],S).
 
-% calcular os custos dos caminhos
 
-aStarAux(Estado, Orla, NOrla):-
+aStarAux(Estado, (Pai,Custo) , Orla, NOrla):-
+	distancia(Pai,Estado,Score),
 	aScore(Estado, R),
-	AScore is R + Score,
+	AScore is R + Score + Custo,
 	(not(member((Estado,_),Orla)), insertSorted((Estado,AScore),Orla, NOrla);
-	member((Estado,NowScore),Orla), AScore < NowScore, delete(Orla,(Estado,NowScore),VOrla), insertSorted((Estado,NowScore),VOrla,NOrla)).
+	member((Estado,NowScore),Orla), AScore < NowScore, delete(Orla,(Estado,NowScore),VOrla), insertSorted((Estado,AScore),VOrla,NOrla)).
 
-forEach(_,_,[],_,[]).
-forEach(Pred,[E|T],Orla,R):-
-	call(Pred,E,Orla,R1),
-	forEach(Pred,T,R1,R).
+forEach(_,_,[],R1,R1).
+forEach(Pred,Pai,[E|T],Orla,R):-
+	call(Pred,E,Pai,Orla,R1),
+	forEach(Pred,Pai,T,R1,R).
+
+
+resolveGreedy(S):-
+	inicial(InicialEstado),
+	aScore(InicialEstado, Score),
+	resolveGreedy([(InicialEstado/0,Score)],[], S).
+
+resolveGreedy([(E/_,Score)|Orla],_,[(E,Score)]):-
+	final(E),!.
+
+resolveGreedy([],_,[]):-
+	!,fail.
+
+resolveGreedy([(E/Custo,Score)|Orla],Visitados,[(E,Cumulative)|S]):-
+	findall(Estado, (haCaminho(E,Estado), not(member((Estado,_),Visitados))), Vizinhos),
+	aScore(E,AScr),
+	forEach(aStarAux, _, Vizinhos, Orla, NOrla),
+	resolveGreedy(NOrla,[(E,Custo)|Visitados],S).
+
+
+greedyAux(Estado,_,Orla, NOrla):-
+	aScore(Estado, AScore),
+	(not(member((Estado,_),Orla)), insertSorted((Estado,AScore),Orla, NOrla);
+	member((Estado,NowScore),Orla), AScore < NowScore, delete(Orla,(Estado,NowScore),VOrla), insertSorted((Estado,AScore),VOrla,NOrla)).
+
+
+
+
+resolveAEstrela(Nodo, Caminho/Custo) :-
+    aScore(Nodo, Estima),
+    aestrela([[Nodo]/0/Estima], CaminhoInverso/Custo/_),
+    inverso(CaminhoInverso, Caminho).
+
+aestrela(Caminhos, Caminho) :-
+	obtem_melhor(Caminhos, Caminho),
+	Caminho = [Nodo|_]/_/_,final(Nodo).
+
+aestrela(Caminhos, SolucaoCaminho) :-
+    obtem_melhor(Caminhos, MelhorCaminho),
+    seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
+    expandeAEstrela(MelhorCaminho, ExpCaminhos),
+    append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
+    aestrela(NovoCaminhos, SolucaoCaminho).
+
+obtem_melhor([Caminho], Caminho) :- !.
+
+obtem_melhor([Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos], MelhorCaminho) :-
+	Custo1 + Est1 =< Custo2 + Est2, !,
+	obtem_melhor([Caminho1/Custo1/Est1|Caminhos], MelhorCaminho).
 	
+obtem_melhor([_|Caminhos], MelhorCaminho) :- 
+	obtem_melhor(Caminhos, MelhorCaminho).
+    
+expandeAEstrela(Caminho, ExpCaminhos) :-
+findall(NovoCaminho, haCaminho(Caminho,NovoCaminho), ExpCaminhos). %adjacenteG/2 da Alínea anterior
 
 
+adjacenteG([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/Est) :-
+	haCaminho(Nodo, ProxNodo), distancia(Nodo,ProxNodo,PassoCusto),\+ member(ProxNodo, Caminho),
+	NovoCusto is Custo + PassoCusto,
+	aScore(ProxNodo, Est).
 
-
+seleciona(E, [E|Xs], Xs).
+seleciona(E, [X|Xs], [X|Ys]) :- seleciona(E, Xs, Ys).
 
 
 
