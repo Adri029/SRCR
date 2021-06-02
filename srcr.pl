@@ -1,11 +1,11 @@
 :- consult(paths).
 
 loadcsv:-
-	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\lixo.csv', Rows1,[functor(lixo), arity(3)]),
+	csv_read_file('C:\\Users\\Adriano\\Documents\\GitHub\\SRCR\\lixo.csv', Rows1,[functor(lixo), arity(3)]),
    	maplist(assert, Rows1),
-   	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\local.csv', Rows2,[functor(local), arity(2)]),
+   	csv_read_file('C:\\Users\\Adriano\\Documents\\GitHub\\SRCR\\local.csv', Rows2,[functor(local), arity(2)]),
    	maplist(assert, Rows2),
-   	csv_read_file('C:\\Users\\adria\\Documents\\GitHub\\SRCR\\coordenada.csv', Rows3,[functor(coordenada), arity(4)]),
+   	csv_read_file('C:\\Users\\Adriano\\Documents\\GitHub\\SRCR\\coordenada.csv', Rows3,[functor(coordenada), arity(4)]),
    	maplist(assert, Rows3).
 
 loadcsv(Path1,Path2,Path3):- 
@@ -23,7 +23,7 @@ haCaminho(Estado, Estado1) :-
 	caminho(Estado1, Estado).
 
 inicial(0).
-final(21).
+final(24).
 
 
 
@@ -46,21 +46,28 @@ resolveBFS([E|Orla], Visitados, [E|Sol]):-
 */
 
 
-resolveBFS(Sol1):-
+
+% custo do último incluído
+resolveBFS(Sol1/Custo/Reco):-
 	inicial(NodeS),
 	final(NodeD),
-	bfs([[NodeS]], NodeD, Sol),
+	bfs([[NodeS]/0/0], NodeD, Sol/Custo/Reco),
 	reverse(Sol,Sol1).
 
-bfs([[Node|Path]|_], Node, [Node|Path]).
+bfs([[Node|Path]/Custo/Reco|_], Node, [Node|Path]/Custo/Reco).
 
 bfs([Path|Paths], NodeD, Sol):-
 	extende(Path, NewPaths),
 	append(Paths, NewPaths, Paths1),
 	bfs(Paths1, NodeD, Sol).
 
-extende([Node|Path], NewPaths) :-
-	findall([NewNode, Node|Path], (haCaminho(Node, NewNode), not(member(NewNode, [Node|Path]))), NewPaths).
+extende([Node|Path]/Custo/Reco, NewPaths) :-
+	findall([NewNode, Node|Path]/NCusto/NReco, 
+					(haCaminho(Node, NewNode), not(member(NewNode, [Node|Path])), 
+					 lixo(NewNode,_,Lixo),NReco is Reco + Lixo,
+					 NReco < 15000,
+					 distancia(Node,NewNode,D), NCusto is Custo + D),
+			NewPaths).
 
 
 
@@ -82,19 +89,54 @@ resolveDFS([E|Orla], Visitados, [E|Sol]):-
 
 */
 
+% custo do primeiro incluído
 
-resolveDFS([Nodo|Caminho]):-
+resolveDFS([Nodo|Caminho]/Custo/Reco):-
 	inicial(Nodo),
-    dfs(Nodo,[Nodo],Caminho).
+    dfs(Nodo,[Nodo],Caminho/Custo/Reco),
+    Reco =< 15000.
+    
 
-dfs(Nodo,_, []):-
+dfs(Nodo,_, []/0/0):-
     final(Nodo).
 
-dfs(Nodo, Historico, [NodoProx|Caminho]):-
+dfs(Nodo, Historico, [NodoProx|Caminho]/NCusto/NReco):-
     haCaminho(Nodo, NodoProx),
     not(member(NodoProx, Historico)),
-    dfs(NodoProx, [NodoProx|Historico], Caminho).
+    dfs(NodoProx, [NodoProx|Historico], Caminho/Custo/Reco),
+    distancia(Nodo,NodoProx, D),
+    NCusto is Custo + D,
+    lixo(Nodo,_,Lixo),
+    NReco is Reco + Lixo.
 
+
+resolveIDFS([Nodo|Caminho]/NCusto/NReco,N):-
+	inicial(Nodo),
+    idfsAux(Nodo,Caminho/NCusto/NReco, 0,N).
+
+idfsAux(_,[]/0/0,N,N).
+
+idfsAux(Nodo ,Caminho, I,N):-
+	idfs(Nodo,[Nodo],Caminho, I,N).
+
+idfsAux(Nodo ,Caminho, I,N):-
+	NI is I+1,
+	idfs(Nodo,[Nodo],Caminho, NI,N).
+
+idfs(Nodo,_, []/0/0, _,_):-
+    final(Nodo).
+
+idfs(_,_,[]/0/0,N,N):- !.
+
+idfs(Nodo, Historico, [NodoProx|Caminho]/NCusto/NReco, I ,N):-
+    haCaminho(Nodo, NodoProx),
+    not(member(NodoProx, Historico)),
+    NI is I + 1,
+    idfs(NodoProx, [NodoProx|Historico] ,Caminho/Custo/Reco, NI, N),
+    distancia(Nodo,NodoProx, D),
+    NCusto is Custo + D,
+    lixo(Nodo,_,Lixo),
+    NReco is Reco + Lixo.
 
 
 % DFS com limite de procura
@@ -183,7 +225,7 @@ forEach(Pred,Pai,[E|T],Orla,R):-
 */
 
 
-
+%TODO adicionar qntds aqui
 
 
 resolveAEstrela(Nodo, Caminho/Custo) :-
@@ -212,8 +254,7 @@ obtem_melhor([_|Caminhos], MelhorCaminho) :-
 	obtem_melhor(Caminhos, MelhorCaminho).
     
 expandeAEstrela(Caminho, ExpCaminhos) :-
-	findall(NovoCaminho, adjacenteG(Caminho,NovoCaminho), ExpCaminhos). %adjacenteG/2 da Alínea anterior
-
+	findall(NovoCaminho, adjacenteG(Caminho,NovoCaminho), ExpCaminhos). 
 
 adjacenteG([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/Est) :-
 	haCaminho(Nodo, ProxNodo), distancia(Nodo,ProxNodo,PassoCusto), not(member(ProxNodo, Caminho)),
@@ -224,6 +265,34 @@ adjacenteG([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/Est) :-
 seleciona(E, [E|Xs], Xs).
 seleciona(E, [X|Xs], [X|Ys]) :- seleciona(E, Xs, Ys).
 
+
+resolveGulosa(Nodo, Caminho/Custo) :-
+    aScore(Nodo, Estima),
+    gulosa([[Nodo]/0/Estima], CaminhoInverso/Custo/_),
+    reverse(CaminhoInverso, Caminho).
+
+gulosa(Caminhos, Caminho) :-
+	obtem_melhor_g(Caminhos, Caminho),
+	Caminho = [Nodo|_]/_/_,final(Nodo).
+
+gulosa(Caminhos, SolucaoCaminho) :-
+    obtem_melhor_g(Caminhos, MelhorCaminho),
+    seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
+    expandeGulosa(MelhorCaminho, ExpCaminhos),
+    append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
+    gulosa(NovoCaminhos, SolucaoCaminho).
+
+obtem_melhor_g([Caminho], Caminho) :- !.
+
+obtem_melhor_g([Caminho1/Custo1/Est1,_/_/Est2|Caminhos], MelhorCaminho) :-
+	Est1 =< Est2, !,
+	obtem_melhor_g([Caminho1/Custo1/Est1|Caminhos], MelhorCaminho).
+	
+obtem_melhor_g([_|Caminhos], MelhorCaminho) :- 
+	obtem_melhor_g(Caminhos, MelhorCaminho).
+    
+expandeGulosa(Caminho, ExpCaminhos) :-
+	findall(NovoCaminho, adjacenteG(Caminho,NovoCaminho), ExpCaminhos). 
 
 
 %TODO eliminar repetidos do dataset para os algoritmos funcionarem
